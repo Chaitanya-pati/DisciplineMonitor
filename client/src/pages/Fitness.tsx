@@ -105,7 +105,9 @@ export default function Fitness() {
   const today = format(new Date(), 'yyyy-MM-dd');
 
   const checklistItems = useLiveQuery(
-    () => db.checklistItems.filter(item => item.isActive === 1).sortBy('order')
+    () => db.checklistItems.toArray().then(items => 
+      items.filter(item => item.isActive === 1).sort((a, b) => (a.order || 0) - (b.order || 0))
+    )
   );
 
   const todayLogs = useLiveQuery(
