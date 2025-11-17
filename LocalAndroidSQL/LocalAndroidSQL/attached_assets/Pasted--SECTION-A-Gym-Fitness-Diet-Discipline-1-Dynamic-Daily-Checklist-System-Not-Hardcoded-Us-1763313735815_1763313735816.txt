@@ -1,0 +1,154 @@
+🔷 SECTION A — Gym / Fitness / Diet Discipline
+1) Dynamic Daily Checklist System (Not Hardcoded)
+
+User can create, edit, delete their own checklist items with fields:
+
+Title (e.g., “Water Intake”, “Meditation”)
+
+Input Type:
+
+Yes/No
+
+Number
+
+Slider
+
+Dropdown
+
+Timer
+
+Target Value (optional)
+
+Unit (optional)
+
+Scoring method (auto)
+
+Reminder (optional)
+
+Order sorting (drag & drop)
+
+👉 This makes the checklist fully customizable instead of fixed items.
+
+2) Examples of Items User Might Add
+
+Complete Diet Percentage (%)
+
+Meditation (10+ mins)
+
+Water Intake (4+ litres)
+
+Woke up before 7 AM
+
+Workout Intensity (Low / Medium / High)
+
+Sleep Duration
+
+Screen Time (Max 2 Hrs)
+
+Steps walked
+(Just examples — user can add any)
+
+3) Daily Progress & Scoring
+
+Each item contributes to a Daily Fitness Score
+
+Display:
+
+Daily score progress bar
+
+Full completion summary (e.g., 6/7 habits completed)
+
+Streak system (days meeting minimum threshold)
+
+Cheat day option (does not break streak)
+
+4) Reminders & Notifications
+
+Time-based reminders per checklist item
+
+Water reminders (if added)
+
+Morning routine reminders (wake up / meditation)
+
+5) Reports & Insights
+
+Weekly & monthly completion graph
+
+Streak history
+
+Best and worst performing checklist habits
+
+Habit insights like:
+
+“Most consistent habit: Water Intake”
+
+“You struggle on Sundays”
+
+6) Motivation
+
+Daily fitness motivation quotes
+
+Achievement badges for consistency milestones
+
+🔷 SECTION B — Work / Productivity & Anti-Procrastination
+1) Task Management
+
+Add / Edit / Delete tasks
+
+Priority (Low / Medium / High)
+
+Estimated time & deadline
+
+Subtasks checklist
+
+Categories & work tags (optional)
+
+2) Anti-Procrastination System
+
+Smart reminders before deadline
+
+If user delays or snoozes:
+
+Ask reason: (Tired / Later / Boring / Not urgent / etc.)
+
+Suggest micro-action (Start 5 mins, split into 2 tasks, reduce scope, etc.)
+
+Delay tracking (count times task postponed)
+
+3) Focus & Execution
+
+Pomodoro / Focus timer
+
+Auto time tracking for each task (when timer is active)
+
+“Top 3 priority tasks of the day” suggestion
+
+4) Productivity Streaks & Rewards
+
+Productivity streak (days completing work goals)
+
+Motivation quotes related to work
+
+Achievement badges for:
+
+Completing tasks before deadline
+
+Finishing top priorities
+
+Zero procrastination day
+
+5) Reports & Analytics
+
+Weekly & monthly productivity score
+
+Completion vs delay % charts
+
+Time spent per task category
+
+Insights like:
+
+“You are most productive in the morning”
+
+“Meetings reduce your productivity by 25%”
+
+“Most delayed category: Personal Projects”
