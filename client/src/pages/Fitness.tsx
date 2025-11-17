@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ChecklistItemForm } from '@/components/ChecklistItemForm';
+import { ChecklistItemInput } from '@/components/ChecklistItemInput';
 import { db, type ChecklistItem, type DailyChecklistLog } from '@/lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
@@ -30,12 +31,13 @@ import { CSS } from '@dnd-kit/utilities';
 
 interface SortableItemProps {
   item: ChecklistItem;
-  isChecked: boolean;
-  onToggle: () => void;
+  logValue: boolean | number | string;
+  hasLog: boolean;
+  onChange: (value: boolean | number | string) => void;
   onDelete: () => void;
 }
 
-function SortableItem({ item, isChecked, onToggle, onDelete }: SortableItemProps) {
+function SortableItem({ item, logValue, hasLog, onChange, onDelete }: SortableItemProps) {
   const {
     attributes,
     listeners,
@@ -48,6 +50,24 @@ function SortableItem({ item, isChecked, onToggle, onDelete }: SortableItemProps
     transform: CSS.Transform.toString(transform),
     transition,
   };
+
+  // Get default value based on input type
+  const getDefaultValue = () => {
+    switch (item.inputType) {
+      case 'yesno':
+        return false;
+      case 'number':
+      case 'slider':
+      case 'timer':
+        return 0;
+      case 'dropdown':
+        return item.dropdownOptions?.[0] || '';
+      default:
+        return false;
+    }
+  };
+
+  const currentValue = hasLog ? logValue : getDefaultValue();
 
   return (
     <div
@@ -63,15 +83,18 @@ function SortableItem({ item, isChecked, onToggle, onDelete }: SortableItemProps
         <GripVertical className="h-5 w-5 text-muted-foreground" />
       </button>
 
-      <Checkbox
-        checked={isChecked}
-        onCheckedChange={onToggle}
-        className="flex-shrink-0"
-      />
-
-      <span className={`flex-1 ${isChecked ? 'line-through text-muted-foreground' : ''}`}>
+      <span className={`flex-1 ${hasLog && item.inputType === 'yesno' && currentValue ? 'line-through text-muted-foreground' : ''}`}>
         {item.title}
+        {item.unit && ` (${item.unit})`}
       </span>
+
+      <div className="flex-shrink-0 min-w-[120px]">
+        <ChecklistItemInput
+          item={item}
+          value={currentValue}
+          onChange={onChange}
+        />
+      </div>
 
       <Button
         variant="ghost"
@@ -110,16 +133,20 @@ export default function Fitness() {
     })
   );
 
-  const handleToggleItem = async (itemId: string) => {
+  const handleItemValueChange = async (itemId: string, value: boolean | number | string) => {
     const existingLog = todayLogs?.find(log => log.checklistItemId === itemId);
 
     if (existingLog) {
-      await db.dailyChecklistLogs.delete(existingLog.id);
+      await db.dailyChecklistLogs.update(existingLog.id, {
+        value,
+        completedAt: Date.now(),
+      });
     } else {
       await db.dailyChecklistLogs.add({
         id: crypto.randomUUID(),
         checklistItemId: itemId,
         date: todayString,
+        value,
         completedAt: Date.now(),
       });
     }
@@ -202,15 +229,19 @@ export default function Fitness() {
                 items={checklistItems.map(item => item.id)}
                 strategy={verticalListSortingStrategy}
               >
-                {checklistItems.filter(item => item.isActive).map((item) => (
-                  <SortableItem
-                    key={item.id}
-                    item={item}
-                    isChecked={todayLogs?.some(log => log.checklistItemId === item.id) || false}
-                    onToggle={() => handleToggleItem(item.id)}
-                    onDelete={() => handleDeleteItem(item.id)}
-                  />
-                ))}
+                {checklistItems.filter(item => item.isActive).map((item) => {
+                  const log = todayLogs?.find(log => log.checklistItemId === item.id);
+                  return (
+                    <SortableItem
+                      key={item.id}
+                      item={item}
+                      logValue={log?.value || false}
+                      hasLog={!!log}
+                      onChange={(value) => handleItemValueChange(item.id, value)}
+                      onDelete={() => handleDeleteItem(item.id)}
+                    />
+                  );
+                })}
               </SortableContext>
             </DndContext>
           )}
