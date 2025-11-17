@@ -1,6 +1,8 @@
+
+import { type ChecklistItem } from '@/lib/db';
 import { Switch } from '@/components/ui/switch';
-import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -8,7 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { ChecklistItem } from '@shared/schema';
 
 interface ChecklistItemInputProps {
   item: ChecklistItem;
@@ -23,43 +24,42 @@ export function ChecklistItemInput({ item, value, onChange }: ChecklistItemInput
         <Switch
           checked={value as boolean}
           onCheckedChange={onChange}
-          data-testid={`input-${item.id}`}
         />
       );
-    
+
     case 'number':
       return (
         <Input
           type="number"
           value={value as number}
-          onChange={e => onChange(e.target.valueAsNumber)}
+          onChange={(e) => onChange(Number(e.target.value))}
           className="w-24"
-          data-testid={`input-${item.id}`}
+          min={item.minValue}
+          max={item.maxValue}
         />
       );
-    
+
     case 'slider':
       return (
-        <div className="flex items-center gap-4 w-full">
+        <div className="w-32">
           <Slider
             value={[value as number]}
-            onValueChange={([v]) => onChange(v)}
-            max={item.targetValue ?? 100}
+            onValueChange={(vals) => onChange(vals[0])}
+            min={item.minValue || 0}
+            max={item.maxValue || 100}
             step={1}
-            className="flex-1"
-            data-testid={`input-${item.id}`}
           />
-          <span className="text-sm font-medium w-12 text-right">
-            {value}/{item.targetValue}
-          </span>
         </div>
       );
-    
+
     case 'dropdown':
       return (
-        <Select value={value as string} onValueChange={onChange}>
-          <SelectTrigger className="w-40" data-testid={`input-${item.id}`}>
-            <SelectValue placeholder="Select" />
+        <Select
+          value={value as string}
+          onValueChange={onChange}
+        >
+          <SelectTrigger className="w-32">
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {item.dropdownOptions?.map((option) => (
@@ -70,19 +70,14 @@ export function ChecklistItemInput({ item, value, onChange }: ChecklistItemInput
           </SelectContent>
         </Select>
       );
-    
+
     case 'timer':
       return (
-        <Input
-          type="number"
-          value={value as number}
-          onChange={e => onChange(e.target.valueAsNumber)}
-          placeholder="Minutes"
-          className="w-24"
-          data-testid={`input-${item.id}`}
-        />
+        <div className="text-sm">
+          {Math.floor((value as number) / 60)}:{String((value as number) % 60).padStart(2, '0')}
+        </div>
       );
-    
+
     default:
       return null;
   }
