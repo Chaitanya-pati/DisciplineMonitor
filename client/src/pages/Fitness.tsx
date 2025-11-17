@@ -105,7 +105,7 @@ export default function Fitness() {
   const today = format(new Date(), 'yyyy-MM-dd');
 
   const checklistItems = useLiveQuery(
-    () => db.checklistItems.where('isActive').equals(true).sortBy('order')
+    () => db.checklistItems.where('isActive').equals(1).sortBy('order')
   );
 
   const todayLogs = useLiveQuery(
@@ -171,7 +171,7 @@ export default function Fitness() {
   };
 
   const updateDailySummary = async () => {
-    const items = await db.checklistItems.where('isActive').equals(true).toArray();
+    const items = await db.checklistItems.where('isActive').equals(1).toArray();
     const logs = await db.dailyChecklistLogs.where('date').equals(today).toArray();
     
     const totalItems = items.length;

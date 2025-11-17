@@ -8,6 +8,17 @@ FitFlow is a Progressive Web Application (PWA) designed to help users track fitn
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+**November 17, 2024** - Replit Environment Setup
+- Migrated project from nested GitHub import structure to root directory
+- Configured development workflow to run on port 5000 with webview output
+- Fixed TypeScript type issues in Fitness.tsx (IndexedDB boolean queries)
+- Set up deployment configuration for autoscale (production-ready)
+- Verified all dependencies installed and working correctly
+- Confirmed Vite HMR (Hot Module Replacement) is functional
+- Created .gitignore for Node.js project structure
+
 ## System Architecture
 
 ### Frontend Architecture
@@ -47,6 +58,14 @@ Preferred communication style: Simple, everyday language.
 - Hot module replacement (HMR) in development via Vite middleware
 - Custom logging middleware for API request tracking
 - Development-only Replit plugins (cartographer, dev-banner, runtime-error-modal)
+
+**Replit Configuration:**
+- Development server runs on port 5000 (host: 0.0.0.0) with `npm run dev`
+- Vite configured with `allowedHosts: true` to support Replit proxy/iframe
+- Workflow: "dev" - runs the development server with HMR enabled
+- Deployment: Configured for autoscale mode with production build
+- Build command: `npm run build` (Vite + esbuild)
+- Production start: `node dist/index.js`
 
 **Data Persistence Strategy:**
 - Client-side: Dexie.js (IndexedDB) for offline-first data storage
