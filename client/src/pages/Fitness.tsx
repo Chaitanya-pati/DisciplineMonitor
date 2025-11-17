@@ -68,7 +68,7 @@ function SortableItem({ item, isChecked, onToggle, onDelete }: SortableItemProps
       />
 
       <span className={`flex-1 ${isChecked ? 'line-through text-muted-foreground' : ''}`}>
-        {item.name}
+        {item.title}
       </span>
 
       <Button
@@ -110,7 +110,7 @@ export default function Fitness() {
     try {
       const items = await db.checklistItems.toArray();
       const activeItems = items
-        .filter(item => item.isActive === 1)
+        .filter(item => item.isActive)
         .sort((a, b) => (a.order || 0) - (b.order || 0));
       setChecklistItems(activeItems);
     } catch (error) {
@@ -148,7 +148,7 @@ export default function Fitness() {
   };
 
   const handleDeleteItem = async (itemId: string) => {
-    await db.checklistItems.update(itemId, { isActive: 0 });
+    await db.checklistItems.update(itemId, { isActive: false });
     await loadChecklistItems();
   };
 
@@ -169,19 +169,7 @@ export default function Fitness() {
     }
   };
 
-  const handleAddItem = async (name: string) => {
-    const maxOrder = checklistItems.length > 0
-      ? Math.max(...checklistItems.map(item => item.order || 0))
-      : -1;
-
-    await db.checklistItems.add({
-      id: crypto.randomUUID(),
-      name,
-      order: maxOrder + 1,
-      isActive: 1,
-      createdAt: Date.now(),
-    });
-
+  const handleFormSuccess = async () => {
     await loadChecklistItems();
     setShowAddDialog(false);
   };
@@ -256,12 +244,9 @@ export default function Fitness() {
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Checklist Item</DialogTitle>
+            <DialogTitle>Add Habit</DialogTitle>
           </DialogHeader>
-          <ChecklistItemForm
-            onSubmit={handleAddItem}
-            onCancel={() => setShowAddDialog(false)}
-          />
+          <ChecklistItemForm onSuccess={handleFormSuccess} />
         </DialogContent>
       </Dialog>
     </div>
