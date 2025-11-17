@@ -1,4 +1,5 @@
 
+import React from 'react';
 import { type ChecklistItem } from '@/lib/db';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
@@ -32,23 +33,25 @@ export function ChecklistItemInput({ item, value, onChange }: ChecklistItemInput
         <Input
           type="number"
           value={value as number}
-          onChange={(e) => onChange(Number(e.target.value))}
+          onChange={(e) => onChange(Number(e.target.value) || 0)}
           className="w-24"
-          min={item.minValue}
-          max={item.maxValue}
         />
       );
 
     case 'slider':
       return (
-        <div className="w-32">
+        <div className="flex items-center gap-2 w-full">
           <Slider
             value={[value as number]}
             onValueChange={(vals) => onChange(vals[0])}
-            min={item.minValue || 0}
-            max={item.maxValue || 100}
+            min={0}
+            max={item.targetValue || 100}
             step={1}
+            className="flex-1"
           />
+          <span className="text-sm font-medium w-16 text-right">
+            {value}/{item.targetValue || 100}
+          </span>
         </div>
       );
 
@@ -73,7 +76,7 @@ export function ChecklistItemInput({ item, value, onChange }: ChecklistItemInput
 
     case 'timer':
       return (
-        <div className="text-sm">
+        <div className="text-sm font-medium">
           {Math.floor((value as number) / 60)}:{String((value as number) % 60).padStart(2, '0')}
         </div>
       );
