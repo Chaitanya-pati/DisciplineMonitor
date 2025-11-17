@@ -75,20 +75,20 @@ function SortableItem({ item, logValue, hasLog, onChange, onDelete }: SortableIt
       style={style}
       className="flex items-center gap-3 p-3 bg-card rounded-lg border"
     >
-      <button
+      <div
         className="cursor-grab active:cursor-grabbing touch-none"
         {...attributes}
         {...listeners}
       >
         <GripVertical className="h-5 w-5 text-muted-foreground" />
-      </button>
+      </div>
 
       <span className={`flex-1 ${hasLog && item.inputType === 'yesno' && currentValue ? 'line-through text-muted-foreground' : ''}`}>
         {item.title}
         {item.unit && ` (${item.unit})`}
       </span>
 
-      <div className="flex-shrink-0 min-w-[120px]">
+      <div className="flex-shrink-0 min-w-[120px]" onClick={(e) => e.stopPropagation()}>
         <ChecklistItemInput
           item={item}
           value={currentValue}
