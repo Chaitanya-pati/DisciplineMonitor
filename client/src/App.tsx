@@ -1,10 +1,10 @@
+
 import { useEffect } from 'react';
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ThemeProvider } from "@/components/ThemeProvider";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { initializeDatabase } from "@/lib/db";
 import Dashboard from "@/pages/Dashboard";
@@ -35,15 +35,13 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <TooltipProvider>
-          <div className="min-h-screen bg-background text-foreground">
-            <Router />
-            <BottomNavigation />
-          </div>
-          <Toaster />
-        </TooltipProvider>
-      </ThemeProvider>
+      <TooltipProvider>
+        <div className="min-h-screen bg-background text-foreground">
+          <Router />
+          <BottomNavigation />
+        </div>
+        <Toaster />
+      </TooltipProvider>
     </QueryClientProvider>
   );
 }
