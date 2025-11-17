@@ -85,7 +85,6 @@ export async function initializeDatabase() {
       ]);
     } catch (error) {
       // Ignore ConstraintError - streaks already exist
-      console.debug('Streaks already initialized');
     }
   }
 }

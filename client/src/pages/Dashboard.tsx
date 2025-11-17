@@ -28,8 +28,8 @@ export default function Dashboard() {
   );
   
   const completedTasks = useLiveQuery(async () => {
-    const tasks = await db.tasks.where('completedAt').above(0).toArray();
-    return tasks.filter(t => {
+    const allTasks = await db.tasks.toArray();
+    return allTasks.filter(t => {
       if (!t.completedAt) return false;
       const completedDate = format(new Date(t.completedAt), 'yyyy-MM-dd');
       return completedDate === today;
@@ -46,7 +46,7 @@ export default function Dashboard() {
   const completedItems = todaySummary?.completedItems ?? 0;
   const totalItems = todaySummary?.totalItems ?? 0;
 
-  if (todaySummary === undefined || fitnessStreak === undefined || randomQuote === undefined) {
+  if (fitnessStreak === undefined || productivityStreak === undefined || completedTasks === undefined) {
     return (
       <div className="p-4 space-y-6 pb-20">
         <Skeleton className="h-48 w-full rounded-xl" />
