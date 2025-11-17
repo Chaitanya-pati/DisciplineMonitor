@@ -105,17 +105,29 @@ export default function Fitness() {
   const today = format(new Date(), 'yyyy-MM-dd');
 
   const checklistItems = useLiveQuery(
-    () => db.checklistItems.toArray().then(items => 
-      items.filter(item => item.isActive === 1).sort((a, b) => (a.order || 0) - (b.order || 0))
-    )
+    async () => {
+      const items = await db.checklistItems.toArray();
+      return items
+        .filter(item => item.isActive === 1)
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+    },
+    []
   );
 
   const todayLogs = useLiveQuery(
-    () => db.dailyChecklistLogs.where('date').equals(today).toArray()
+    async () => {
+      const logs = await db.dailyChecklistLogs.toArray();
+      return logs.filter(log => log.date === today);
+    },
+    [today]
   );
 
   const todaySummary = useLiveQuery(
-    () => db.dailySummaries.where('date').equals(today).first()
+    async () => {
+      const summaries = await db.dailySummaries.toArray();
+      return summaries.find(s => s.date === today);
+    },
+    [today]
   );
 
   const sensors = useSensors(
