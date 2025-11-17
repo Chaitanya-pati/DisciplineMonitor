@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Plus, Check, Trash2, GripVertical } from 'lucide-react';
@@ -7,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ChecklistItemForm } from '@/components/ChecklistItemForm';
-import { db, type ChecklistItem, type ChecklistLog } from '@/lib/db';
+import { db, type ChecklistItem, type DailyChecklistLog } from '@/lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   DndContext,
@@ -85,9 +86,12 @@ function SortableItem({ item, isChecked, onToggle, onDelete }: SortableItemProps
 }
 
 export default function Fitness() {
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate] = useState(new Date());
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<ChecklistItem | null>(null);
+
+  // Get today's date string for querying
+  const todayString = format(selectedDate, 'yyyy-MM-dd');
 
   const checklistItems = useLiveQuery(
     () => db.checklistItems.orderBy('order').toArray(),
@@ -95,18 +99,8 @@ export default function Fitness() {
   );
 
   const todayLogs = useLiveQuery(
-    () => {
-      const startOfDay = new Date(selectedDate);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(selectedDate);
-      endOfDay.setHours(23, 59, 59, 999);
-
-      return db.checklistLogs
-        .where('loggedAt')
-        .between(startOfDay.getTime(), endOfDay.getTime(), true, true)
-        .toArray();
-    },
-    [selectedDate.getTime()]
+    () => db.dailyChecklistLogs.where('date').equals(todayString).toArray(),
+    [todayString]
   );
 
   const sensors = useSensors(
@@ -120,12 +114,13 @@ export default function Fitness() {
     const existingLog = todayLogs?.find(log => log.checklistItemId === itemId);
 
     if (existingLog) {
-      await db.checklistLogs.delete(existingLog.id);
+      await db.dailyChecklistLogs.delete(existingLog.id);
     } else {
-      await db.checklistLogs.add({
+      await db.dailyChecklistLogs.add({
         id: crypto.randomUUID(),
         checklistItemId: itemId,
-        loggedAt: Date.now(),
+        date: todayString,
+        completedAt: Date.now(),
       });
     }
   };
@@ -193,7 +188,7 @@ export default function Fitness() {
         </div>
 
         <div className="space-y-2">
-          {checklistItems?.length === 0 ? (
+          {!checklistItems || checklistItems.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
               No checklist items yet. Add your first item to get started!
             </p>
