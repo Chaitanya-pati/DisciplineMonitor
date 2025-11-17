@@ -8,6 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ChecklistItemForm } from '@/components/ChecklistItemForm';
 import { db, type ChecklistItem, type ChecklistLog } from '@/lib/db';
+import { useLiveQuery } from 'dexie-react-hooks';
 import {
   DndContext,
   closestCenter,
@@ -84,10 +85,29 @@ function SortableItem({ item, isChecked, onToggle, onDelete }: SortableItemProps
 }
 
 export default function Fitness() {
-  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
-  const [todayLogs, setTodayLogs] = useState<ChecklistLog[]>([]);
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const today = format(new Date(), 'yyyy-MM-dd');
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showForm, setShowForm] = useState(false);
+  const [editingItem, setEditingItem] = useState<ChecklistItem | null>(null);
+
+  const checklistItems = useLiveQuery(
+    () => db.checklistItems.orderBy('order').toArray(),
+    []
+  );
+
+  const todayLogs = useLiveQuery(
+    () => {
+      const startOfDay = new Date(selectedDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(selectedDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      return db.checklistLogs
+        .where('loggedAt')
+        .between(startOfDay.getTime(), endOfDay.getTime(), true, true)
+        .toArray();
+    },
+    [selectedDate.getTime()]
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -96,42 +116,8 @@ export default function Fitness() {
     })
   );
 
-  // Load checklist items
-  useEffect(() => {
-    loadChecklistItems();
-  }, []);
-
-  // Load today's logs
-  useEffect(() => {
-    loadTodayLogs();
-  }, [today]);
-
-  const loadChecklistItems = async () => {
-    try {
-      const items = await db.checklistItems.toArray();
-      const activeItems = items
-        .filter(item => item.isActive)
-        .sort((a, b) => (a.order || 0) - (b.order || 0));
-      setChecklistItems(activeItems);
-    } catch (error) {
-      console.error('Error loading checklist items:', error);
-      setChecklistItems([]);
-    }
-  };
-
-  const loadTodayLogs = async () => {
-    try {
-      const logs = await db.checklistLogs.toArray();
-      const todayLogsFiltered = logs.filter(log => log.date === today);
-      setTodayLogs(todayLogsFiltered);
-    } catch (error) {
-      console.error('Error loading today logs:', error);
-      setTodayLogs([]);
-    }
-  };
-
   const handleToggleItem = async (itemId: string) => {
-    const existingLog = todayLogs.find(log => log.checklistItemId === itemId);
+    const existingLog = todayLogs?.find(log => log.checklistItemId === itemId);
 
     if (existingLog) {
       await db.checklistLogs.delete(existingLog.id);
@@ -139,29 +125,24 @@ export default function Fitness() {
       await db.checklistLogs.add({
         id: crypto.randomUUID(),
         checklistItemId: itemId,
-        date: today,
-        completedAt: Date.now(),
+        loggedAt: Date.now(),
       });
     }
-
-    await loadTodayLogs();
   };
 
   const handleDeleteItem = async (itemId: string) => {
     await db.checklistItems.update(itemId, { isActive: false });
-    await loadChecklistItems();
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
-    if (over && active.id !== over.id) {
+    if (over && active.id !== over.id && checklistItems) {
       const oldIndex = checklistItems.findIndex((item) => item.id === active.id);
       const newIndex = checklistItems.findIndex((item) => item.id === over.id);
 
       const newItems = arrayMove(checklistItems, oldIndex, newIndex);
-      setChecklistItems(newItems);
-
+      
       // Update order in database
       for (let i = 0; i < newItems.length; i++) {
         await db.checklistItems.update(newItems[i].id, { order: i });
@@ -169,13 +150,13 @@ export default function Fitness() {
     }
   };
 
-  const handleFormSuccess = async () => {
-    await loadChecklistItems();
-    setShowAddDialog(false);
+  const handleFormSuccess = () => {
+    setShowForm(false);
+    setEditingItem(null);
   };
 
-  const completedCount = todayLogs.length;
-  const totalCount = checklistItems.length;
+  const completedCount = todayLogs?.filter(log => checklistItems?.some(item => item.id === log.checklistItemId)).length || 0;
+  const totalCount = checklistItems?.filter(item => item.isActive).length || 0;
   const progressPercentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   return (
@@ -205,14 +186,14 @@ export default function Fitness() {
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-medium">Checklist Items</h2>
-          <Button onClick={() => setShowAddDialog(true)} size="sm">
+          <Button onClick={() => { setEditingItem(null); setShowForm(true); }} size="sm">
             <Plus className="h-4 w-4 mr-2" />
             Add Item
           </Button>
         </div>
 
         <div className="space-y-2">
-          {checklistItems.length === 0 ? (
+          {checklistItems?.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
               No checklist items yet. Add your first item to get started!
             </p>
@@ -226,11 +207,11 @@ export default function Fitness() {
                 items={checklistItems.map(item => item.id)}
                 strategy={verticalListSortingStrategy}
               >
-                {checklistItems.map((item) => (
+                {checklistItems.filter(item => item.isActive).map((item) => (
                   <SortableItem
                     key={item.id}
                     item={item}
-                    isChecked={todayLogs.some(log => log.checklistItemId === item.id)}
+                    isChecked={todayLogs?.some(log => log.checklistItemId === item.id) || false}
                     onToggle={() => handleToggleItem(item.id)}
                     onDelete={() => handleDeleteItem(item.id)}
                   />
@@ -241,12 +222,12 @@ export default function Fitness() {
         </div>
       </Card>
 
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+      <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Habit</DialogTitle>
+            <DialogTitle>{editingItem ? 'Edit Habit' : 'Add Habit'}</DialogTitle>
           </DialogHeader>
-          <ChecklistItemForm onSuccess={handleFormSuccess} />
+          <ChecklistItemForm onSuccess={handleFormSuccess} itemToEdit={editingItem} />
         </DialogContent>
       </Dialog>
     </div>
