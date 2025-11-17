@@ -29,21 +29,47 @@ function Router() {
 
 function App() {
   const [dbReady, setDbReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('Initializing database...');
     // Initialize database with default data
     initializeDatabase()
-      .then(() => setDbReady(true))
+      .then(() => {
+        console.log('Database initialized successfully');
+        setDbReady(true);
+      })
       .catch((error) => {
         console.error('Database initialization failed:', error);
+        setError(error.message);
         setDbReady(true); // Continue anyway
       });
   }, []);
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
+        <div className="text-center">
+          <h1 className="text-xl font-bold mb-2">Initialization Error</h1>
+          <p className="text-sm text-muted-foreground">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md"
+          >
+            Reload
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!dbReady) {
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        <p>Loading...</p>
+        <div className="text-center">
+          <p className="text-lg font-semibold">Loading FitFlow...</p>
+          <p className="text-sm text-muted-foreground mt-2">Initializing database</p>
+        </div>
       </div>
     );
   }
