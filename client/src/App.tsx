@@ -32,19 +32,24 @@ function App() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('Initializing database...');
+    console.log('[App] Component mounted');
+    console.log('[App] Starting database initialization...');
     // Initialize database with default data
     initializeDatabase()
       .then(() => {
-        console.log('Database initialized successfully');
+        console.log('[App] Database initialized successfully');
         setDbReady(true);
+        console.log('[App] State updated: dbReady = true');
       })
       .catch((error) => {
-        console.error('Database initialization failed:', error);
+        console.error('[App] Database initialization failed:', error);
         setError(error.message);
         setDbReady(true); // Continue anyway
+        console.log('[App] Continuing despite error');
       });
   }, []);
+
+  console.log('[App] Render - dbReady:', dbReady, 'error:', error);
 
   if (error) {
     return (

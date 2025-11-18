@@ -40,10 +40,14 @@ export const db = new FitFlowDatabase();
 
 // Initialize with default motivation quotes
 export async function initializeDatabase() {
+  console.log('[DB] Starting database initialization');
   try {
+    console.log('[DB] Checking quotes count...');
     const quotesCount = await db.motivationQuotes.count();
+    console.log('[DB] Quotes count:', quotesCount);
 
     if (quotesCount === 0) {
+      console.log('[DB] Adding default quotes...');
       const defaultQuotes: MotivationQuote[] = [
         // Fitness quotes
         { id: '1', text: 'The body achieves what the mind believes.', author: 'Napoleon Hill', category: 'fitness' },
@@ -76,19 +80,27 @@ export async function initializeDatabase() {
     }
 
     // Initialize streaks if they don't exist
+    console.log('[DB] Checking streaks count...');
     const streaksCount = await db.streaks.count();
+    console.log('[DB] Streaks count:', streaksCount);
+    
     if (streaksCount === 0) {
+      console.log('[DB] Adding default streaks...');
       const today = new Date().toISOString().split('T')[0];
       try {
         await db.streaks.bulkAdd([
           { id: 'fitness-streak', type: 'fitness', currentStreak: 0, longestStreak: 0, lastUpdateDate: today, cheatDaysUsed: 0 },
           { id: 'productivity-streak', type: 'productivity', currentStreak: 0, longestStreak: 0, lastUpdateDate: today, cheatDaysUsed: 0 }
         ]);
+        console.log('[DB] Streaks added successfully');
       } catch (error) {
-        // Ignore ConstraintError - streaks already exist
+        console.log('[DB] Streaks already exist, skipping');
       }
     }
+    
+    console.log('[DB] Database initialization completed successfully');
   } catch (error) {
-    console.error('Failed to initialize database:', error);
+    console.error('[DB] Failed to initialize database:', error);
+    throw error;
   }
 }

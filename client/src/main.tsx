@@ -14,14 +14,23 @@ if ('serviceWorker' in navigator) {
 
 const rootElement = document.getElementById("root");
 
+console.log('[Main] Root element:', rootElement);
+
 if (!rootElement) {
+  console.error('[Main] Root element not found!');
   throw new Error("Root element not found");
 }
 
-console.log('Mounting React app...');
+console.log('[Main] Mounting React app...');
 
-createRoot(rootElement).render(
-  <StrictMode>
-    <App />
-  </StrictMode>
-);
+try {
+  createRoot(rootElement).render(
+    <StrictMode>
+      <App />
+    </StrictMode>
+  );
+  console.log('[Main] React app mounted successfully');
+} catch (err) {
+  console.error('[Main] Failed to mount React app:', err);
+  throw err;
+}
