@@ -56,6 +56,7 @@ export function ChecklistItemInput({ item, value, onChange }: ChecklistItemInput
       );
 
     case 'dropdown':
+      const dropdownOptions = ['High', 'Medium', 'Low'];
       return (
         <Select
           value={value as string}
@@ -65,7 +66,7 @@ export function ChecklistItemInput({ item, value, onChange }: ChecklistItemInput
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {item.dropdownOptions?.map((option) => (
+            {dropdownOptions.map((option) => (
               <SelectItem key={option} value={option}>
                 {option}
               </SelectItem>

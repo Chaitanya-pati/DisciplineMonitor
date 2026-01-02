@@ -177,9 +177,42 @@ export default function Fitness() {
     setEditingItem(null);
   };
 
-  const completedCount = todayLogs?.filter(log => checklistItems?.some(item => item.id === log.checklistItemId)).length || 0;
-  const totalCount = checklistItems?.filter(item => item.isActive).length || 0;
-  const progressPercentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+  const calculateItemProgress = (item: ChecklistItem, log?: DailyChecklistLog) => {
+    if (!log) return 0;
+    
+    switch (item.inputType) {
+      case 'yesno':
+        return log.value === true ? 1 : 0;
+      case 'number':
+      case 'slider':
+      case 'timer':
+        const target = item.targetValue || 1;
+        const current = typeof log.value === 'number' ? log.value : 0;
+        return Math.min(current / target, 1);
+      case 'dropdown':
+        // High = 100%, Medium = 50%, Low = 25%, default 0
+        if (log.value === 'High') return 1;
+        if (log.value === 'Medium') return 0.5;
+        if (log.value === 'Low') return 0.25;
+        return 0;
+      default:
+        return 0;
+    }
+  };
+
+  const totalProgress = checklistItems
+    ?.filter(item => item.isActive)
+    .reduce((acc, item) => {
+      const log = todayLogs?.find(l => l.checklistItemId === item.id);
+      return acc + calculateItemProgress(item, log);
+    }, 0) || 0;
+
+  const activeItemsCount = checklistItems?.filter(item => item.isActive).length || 0;
+  const progressPercentage = activeItemsCount > 0 ? (totalProgress / activeItemsCount) * 100 : 0;
+  const completedCount = todayLogs?.filter(log => {
+    const item = checklistItems?.find(i => i.id === log.checklistItemId);
+    return item && item.isActive && calculateItemProgress(item, log) >= 1;
+  }).length || 0;
 
   return (
     <div className="p-4 space-y-6 pb-20 max-w-7xl mx-auto">
@@ -194,7 +227,7 @@ export default function Fitness() {
             <div>
               <h2 className="text-lg font-medium">Today's Progress</h2>
               <p className="text-sm text-muted-foreground">
-                {completedCount} of {totalCount} completed
+                {Math.round(totalProgress * 10) / 10} of {activeItemsCount} units completed
               </p>
             </div>
             <div className="text-right">
