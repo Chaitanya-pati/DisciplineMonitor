@@ -51,19 +51,30 @@ export function TaskForm({ editingTask, onSuccess }: TaskFormProps) {
   });
 
   const onSubmit = async (data: InsertTask) => {
+    console.log('Form submission started:', data);
     try {
+      const taskData = {
+        ...data,
+        status: data.status || 'assigned'
+      };
+      console.log('Processed task data:', taskData);
+
       if (editingTask) {
-        await db.tasks.update(editingTask.id, data);
+        console.log('Updating task:', editingTask.id);
+        await db.tasks.update(editingTask.id, taskData);
         toast({
           title: 'Success',
           description: 'Task updated successfully!',
         });
       } else {
+        console.log('Adding new task');
+        const id = crypto.randomUUID();
         await db.tasks.add({
-          ...data,
-          id: crypto.randomUUID(),
+          ...taskData,
+          id,
           createdAt: Date.now(),
         });
+        console.log('Task added with ID:', id);
         
         toast({
           title: 'Success',
@@ -71,8 +82,10 @@ export function TaskForm({ editingTask, onSuccess }: TaskFormProps) {
         });
       }
       
+      console.log('Calling onSuccess');
       onSuccess();
     } catch (error) {
+      console.error('Task submission error:', error);
       toast({
         title: 'Error',
         description: 'Failed to save task. Please try again.',
