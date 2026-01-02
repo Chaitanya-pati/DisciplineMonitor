@@ -40,7 +40,7 @@ export function TaskForm({ editingTask, onSuccess }: TaskFormProps) {
       title: editingTask?.title ?? '',
       description: editingTask?.description ?? '',
       priority: editingTask?.priority ?? 'medium',
-      status: editingTask?.status ?? 'pending',
+      status: editingTask?.status ?? 'assigned',
       estimatedTime: editingTask?.estimatedTime,
       deadline: editingTask?.deadline,
       category: editingTask?.category ?? '',
