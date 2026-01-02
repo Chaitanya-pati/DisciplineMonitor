@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { TrendingUp, TrendingDown, Minus, Award, Target, Zap, Calendar as CalendarIcon, ChevronRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Award, Target, Zap, Calendar as CalendarIcon, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { startOfWeek, endOfWeek, eachDayOfInterval, format, subDays, subWeeks, startOfMonth, endOfMonth, subMonths, isWithinInterval } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
