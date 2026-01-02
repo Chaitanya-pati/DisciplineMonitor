@@ -5,7 +5,7 @@ import { updateProductivityStreak } from '@/lib/streaks';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Clock, AlertCircle, CheckCircle2, Circle, ChevronRight, Timer, Play, Pause, GripVertical } from 'lucide-react';
+import { Plus, Clock, AlertCircle, CheckCircle2, Circle, ChevronRight, Timer, GripVertical } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -15,29 +15,14 @@ import {
 } from '@/components/ui/dialog';
 import { TaskForm } from '@/components/TaskForm';
 import { PomodoroTimer } from '@/components/PomodoroTimer';
-import { ProcrastinationDialog } from '@/components/ProcrastinationDialog';
 import type { Task } from '@shared/schema';
 import { format } from 'date-fns';
 import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-  DragOverEvent,
-  rectIntersection,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult,
+} from '@hello-pangea/dnd';
 
 const priorityColors = {
   low: 'bg-blue-500',
@@ -51,25 +36,13 @@ const priorityLabels = {
   high: 'High',
 };
 
-function SortableTaskCard({ task, onToggleComplete, onEdit, isActiveTimer }: { 
+function TaskCard({ task, index, onToggleComplete, onEdit, isActiveTimer }: { 
   task: Task; 
+  index: number;
   onToggleComplete: (task: Task) => void; 
   onEdit: (task: Task) => void;
   isActiveTimer: boolean;
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-  } = useSortable({ id: task.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
   const delayCount = useLiveQuery(
     () => db.procrastinationDelays.where('taskId').equals(task.id).count(),
     [task.id]
@@ -81,7 +54,7 @@ function SortableTaskCard({ task, onToggleComplete, onEdit, isActiveTimer }: {
     let interval: NodeJS.Timeout;
     if (isActiveTimer) {
       interval = setInterval(() => {
-        setLocalTime(prev => prev + 1/60); // add 1 second in minutes
+        setLocalTime(prev => prev + 1/60);
       }, 1000);
     }
     return () => clearInterval(interval);
@@ -95,118 +68,103 @@ function SortableTaskCard({ task, onToggleComplete, onEdit, isActiveTimer }: {
   };
 
   return (
-    <Card 
-      ref={setNodeRef} 
-      style={style} 
-      className={`p-4 hover-elevate transition-shadow ${isActiveTimer ? 'border-primary border-2 shadow-md ring-2 ring-primary/20' : ''}`}
-    >
-      <div className="flex items-start gap-3">
-        <div
-          className="cursor-grab active:cursor-grabbing touch-none mt-1 p-2 -m-2"
-          {...attributes}
-          {...listeners}
+    <Draggable draggableId={task.id} index={index}>
+      {(provided, snapshot) => (
+        <Card 
+          ref={provided.innerRef}
+          {...provided.draggableProps}
+          className={`p-4 transition-all ${isActiveTimer ? 'border-primary border-2 shadow-md ring-2 ring-primary/20' : ''} ${snapshot.isDragging ? 'shadow-xl rotate-1 scale-105 z-50 bg-accent' : ''}`}
         >
-          <GripVertical className="h-5 w-5 text-muted-foreground/50" />
-        </div>
-
-        <button
-          onClick={() => onToggleComplete(task)}
-          className="flex-shrink-0 mt-1 hover:bg-muted p-1 rounded-full transition-colors"
-        >
-          {task.status === 'completed' ? (
-            <CheckCircle2 className="w-5 h-5 text-primary" />
-          ) : (
-            <Circle className="w-5 h-5 text-muted-foreground" />
-          )}
-        </button>
-
-        <div className="flex-1 min-w-0 space-y-2">
-          <div className="flex items-start gap-2">
-            <div className={`w-1 h-6 ${priorityColors[task.priority]} rounded-full flex-shrink-0`} />
-            <div className="flex-1">
-              <h3 className={`font-medium leading-tight ${task.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>
-                {task.title}
-              </h3>
-              {task.description && (
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{task.description}</p>
-              )}
+          <div className="flex items-start gap-3">
+            <div
+              className="mt-1 p-2 -m-2 text-muted-foreground/50 hover:text-muted-foreground transition-colors cursor-grab active:cursor-grabbing"
+              {...provided.dragHandleProps}
+            >
+              <GripVertical className="h-5 w-5" />
             </div>
-          </div>
 
-          <div className="flex flex-wrap items-center gap-1.5">
-            <Badge variant="secondary" className="text-[10px] py-0 h-5 px-1.5 font-medium">
-              {priorityLabels[task.priority]}
-            </Badge>
-            
-            <Badge variant="outline" className={`text-[10px] py-0 h-5 px-1.5 capitalize font-medium ${task.status === 'live' ? 'text-primary border-primary animate-pulse' : ''}`}>
-              {task.status}
-            </Badge>
+            <button
+              onClick={() => onToggleComplete(task)}
+              className="flex-shrink-0 mt-1 hover:bg-muted p-1 rounded-full transition-colors"
+            >
+              {task.status === 'completed' ? (
+                <CheckCircle2 className="w-5 h-5 text-primary" />
+              ) : (
+                <Circle className="w-5 h-5 text-muted-foreground" />
+              )}
+            </button>
 
-            {task.status === 'live' && (
-              <div className="flex items-center gap-1.5 bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
-                <Timer className="w-3 h-3 text-primary" />
-                <span className="text-[10px] font-mono font-bold text-primary">
-                  {formatDuration(localTime)}
-                </span>
+            <div className="flex-1 min-w-0 space-y-2">
+              <div className="flex items-start gap-2">
+                <div className={`w-1 h-6 ${priorityColors[task.priority]} rounded-full flex-shrink-0`} />
+                <div className="flex-1">
+                  <h3 className={`font-medium leading-tight ${task.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>
+                    {task.title}
+                  </h3>
+                  {task.description && (
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{task.description}</p>
+                  )}
+                </div>
               </div>
-            )}
-            
-            {task.deadline && (
-              <Badge variant="outline" className="text-[10px] py-0 h-5 px-1.5 flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {format(new Date(task.deadline), 'MMM d')}
-              </Badge>
-            )}
 
-            {delayCount && delayCount > 0 && (
-              <Badge variant="destructive" className="text-[10px] py-0 h-5 px-1.5 flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" />
-                {delayCount}
-              </Badge>
-            )}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Badge variant="secondary" className="text-[10px] py-0 h-5 px-1.5 font-medium">
+                  {priorityLabels[task.priority]}
+                </Badge>
+                
+                <Badge variant="outline" className={`text-[10px] py-0 h-5 px-1.5 capitalize font-medium ${task.status === 'live' ? 'text-primary border-primary animate-pulse' : ''}`}>
+                  {task.status}
+                </Badge>
+
+                {task.status === 'live' && (
+                  <div className="flex items-center gap-1.5 bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
+                    <Timer className="w-3 h-3 text-primary" />
+                    <span className="text-[10px] font-mono font-bold text-primary">
+                      {formatDuration(localTime)}
+                    </span>
+                  </div>
+                )}
+                
+                {task.deadline && (
+                  <Badge variant="outline" className="text-[10px] py-0 h-5 px-1.5 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {format(new Date(task.deadline), 'MMM d')}
+                  </Badge>
+                )}
+
+                {delayCount && delayCount > 0 && (
+                  <Badge variant="destructive" className="text-[10px] py-0 h-5 px-1.5 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {delayCount}
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 -mt-1"
+              onClick={() => onEdit(task)}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
           </div>
-        </div>
-
-        <Button
-          size="icon"
-          variant="ghost"
-          className="h-8 w-8 -mt-1"
-          onClick={() => onEdit(task)}
-        >
-          <ChevronRight className="w-4 h-4" />
-        </Button>
-      </div>
-    </Card>
+        </Card>
+      )}
+    </Draggable>
   );
 }
 
 export default function Tasks() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [showPomodoro, setShowPomodoro] = useState(false);
   const [activeTimerId, setActiveTimerId] = useState<string | null>(null);
 
   const tasks = useLiveQuery(
     () => db.tasks.toArray(),
     []
-  );
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 250,
-        tolerance: 5,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
   );
 
   const handleToggleComplete = async (task: Task) => {
@@ -236,61 +194,32 @@ export default function Tasks() {
     }
   };
 
-  const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
-    if (!over) return;
+  const onDragEnd = async (result: DropResult) => {
+    const { destination, source, draggableId } = result;
 
-    const activeId = active.id as string;
-    const overId = over.id as string;
+    if (!destination) return;
 
-    const activeTask = tasks?.find(t => t.id === activeId);
-    if (!activeTask) return;
-
-    // If dragging over a column container or a task in a different column
-    let newStatus: Task['status'] | null = null;
-    if (['assigned', 'live', 'completed'].includes(overId)) {
-      newStatus = overId as Task['status'];
-    } else {
-      const overTask = tasks?.find(t => t.id === overId);
-      if (overTask && overTask.status !== activeTask.status) {
-        newStatus = overTask.status;
-      }
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return;
     }
 
-    if (newStatus && newStatus !== activeTask.status) {
-      db.tasks.update(activeId, { status: newStatus });
-    }
-  };
-
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over) return;
-
-    const activeId = active.id as string;
-    const overId = over.id as string;
-
-    let newStatus: Task['status'] | null = null;
-    if (['assigned', 'live', 'completed'].includes(overId)) {
-      newStatus = overId as Task['status'];
-    } else {
-      const overTask = tasks?.find(t => t.id === overId);
-      if (overTask) {
-        newStatus = overTask.status;
-      }
+    const newStatus = destination.droppableId as Task['status'];
+    
+    // Update active timer logic if status changes
+    if (newStatus === 'live') {
+      setActiveTimerId(draggableId);
+    } else if (draggableId === activeTimerId) {
+      setActiveTimerId(null);
     }
 
-    if (newStatus) {
-      if (newStatus === 'live') {
-        setActiveTimerId(activeId);
-      } else if (activeId === activeTimerId) {
-        setActiveTimerId(null);
-      }
-      
-      await db.tasks.update(activeId, { 
-        status: newStatus,
-        completedAt: newStatus === 'completed' ? Date.now() : undefined
-      });
-    }
+    // Persist status and completion time change
+    await db.tasks.update(draggableId, {
+      status: newStatus,
+      completedAt: newStatus === 'completed' ? Date.now() : undefined
+    });
   };
 
   const TaskColumn = ({ title, status, items }: { title: string, status: string, items: Task[] }) => (
@@ -299,28 +228,33 @@ export default function Tasks() {
         <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80">{title}</h2>
         <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">{items.length}</Badge>
       </div>
-      <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
-        <div 
-          id={status} 
-          className="flex-1 space-y-2.5 min-h-[200px] p-2 bg-muted/20 rounded-xl border-2 border-dashed border-muted/50 transition-colors hover:bg-muted/30"
-        >
-          {items.map(task => (
-            <SortableTaskCard 
-              key={task.id} 
-              task={task} 
-              onToggleComplete={handleToggleComplete}
-              onEdit={(t) => { setEditingTask(t); setIsDialogOpen(true); }}
-              isActiveTimer={activeTimerId === task.id}
-            />
-          ))}
-          {items.length === 0 && (
-            <div className="h-full flex flex-col items-center justify-center py-12 gap-2 opacity-50 pointer-events-none">
-              <Plus className="h-4 w-4 text-muted-foreground" />
-              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">Drop Here</span>
-            </div>
-          )}
-        </div>
-      </SortableContext>
+      <Droppable droppableId={status}>
+        {(provided, snapshot) => (
+          <div 
+            {...provided.droppableProps}
+            ref={provided.innerRef}
+            className={`flex-1 space-y-2.5 min-h-[200px] p-2 rounded-xl border-2 border-dashed transition-colors ${snapshot.isDraggingOver ? 'bg-primary/5 border-primary/50' : 'bg-muted/20 border-muted/50 hover:bg-muted/30'}`}
+          >
+            {items.map((task, index) => (
+              <TaskCard 
+                key={task.id} 
+                task={task} 
+                index={index}
+                onToggleComplete={handleToggleComplete}
+                onEdit={(t) => { setEditingTask(t); setIsDialogOpen(true); }}
+                isActiveTimer={activeTimerId === task.id}
+              />
+            ))}
+            {provided.placeholder}
+            {items.length === 0 && !snapshot.isDraggingOver && (
+              <div className="h-full flex flex-col items-center justify-center py-12 gap-2 opacity-50">
+                <Plus className="h-4 w-4 text-muted-foreground" />
+                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">Drop Here</span>
+              </div>
+            )}
+          </div>
+        )}
+      </Droppable>
     </div>
   );
 
@@ -352,18 +286,13 @@ export default function Tasks() {
         </div>
       )}
 
-      <DndContext 
-        sensors={sensors} 
-        collisionDetection={rectIntersection} 
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
-      >
+      <DragDropContext onDragEnd={onDragEnd}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <TaskColumn title="Assigned" status="assigned" items={assignedTasks} />
           <TaskColumn title="Live" status="live" items={liveTasks} />
           <TaskColumn title="Completed" status="completed" items={completedTasks} />
         </div>
-      </DndContext>
+      </DragDropContext>
 
       <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setEditingTask(null); }}>
         <DialogTrigger asChild>
