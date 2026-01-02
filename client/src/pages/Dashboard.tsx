@@ -42,9 +42,60 @@ export default function Dashboard() {
     return quotes[Math.floor(Math.random() * quotes.length)];
   });
 
-  const score = todaySummary?.fitnessScore ?? 0;
-  const completedItems = todaySummary?.completedItems ?? 0;
-  const totalItems = todaySummary?.totalItems ?? 0;
+  const checklistItems = useLiveQuery(
+    () => db.checklistItems.orderBy('order').toArray(),
+    []
+  );
+
+  const calculateFitnessScore = () => {
+    if (!checklistItems || checklistItems.length === 0) return 0;
+    
+    const activeItems = checklistItems.filter(i => i.isActive);
+    if (activeItems.length === 0) return 0;
+
+    const totalProgress = activeItems.reduce((acc, item) => {
+      const log = todayLogs?.find(l => l.checklistItemId === item.id);
+      if (!log) return acc;
+
+      switch (item.inputType) {
+        case 'yesno':
+          return acc + (log.value === true ? 1 : 0);
+        case 'number':
+        case 'slider':
+        case 'timer':
+          const target = item.targetValue || 1;
+          const current = typeof log.value === 'number' ? log.value : 0;
+          return acc + Math.min(current / target, 1);
+        case 'dropdown':
+          if (log.value === 'High') return acc + 1;
+          if (log.value === 'Medium') return acc + 0.5;
+          if (log.value === 'Low') return acc + 0.25;
+          return acc;
+        default:
+          return acc;
+      }
+    }, 0);
+
+    return Math.round((totalProgress / activeItems.length) * 100);
+  };
+
+  const fitnessScore = calculateFitnessScore();
+  const activeItemsCount = checklistItems?.filter(i => i.isActive).length || 0;
+  const score = fitnessScore;
+  const completedItems = todayLogs?.filter(log => {
+    const item = checklistItems?.find(i => i.id === log.checklistItemId);
+    if (!item || !item.isActive) return false;
+    
+    switch (item.inputType) {
+      case 'yesno': return log.value === true;
+      case 'number':
+      case 'slider':
+      case 'timer': return (typeof log.value === 'number' ? log.value : 0) >= (item.targetValue || 1);
+      case 'dropdown': return log.value === 'High';
+      default: return false;
+    }
+  }).length || 0;
+  const totalItems = activeItemsCount;
 
   if (fitnessStreak === undefined || productivityStreak === undefined || completedTasks === undefined) {
     return (
