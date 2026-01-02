@@ -27,6 +27,8 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragOverEvent,
+  rectIntersection,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -234,15 +236,41 @@ export default function Tasks() {
     }
   };
 
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    const activeTask = tasks?.find(t => t.id === activeId);
+    if (!activeTask) return;
+
+    // If dragging over a column container or a task in a different column
+    let newStatus: Task['status'] | null = null;
+    if (['assigned', 'live', 'completed'].includes(overId)) {
+      newStatus = overId as Task['status'];
+    } else {
+      const overTask = tasks?.find(t => t.id === overId);
+      if (overTask && overTask.status !== activeTask.status) {
+        newStatus = overTask.status;
+      }
+    }
+
+    if (newStatus && newStatus !== activeTask.status) {
+      db.tasks.update(activeId, { status: newStatus });
+    }
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over) return;
 
-    const taskId = active.id as string;
+    const activeId = active.id as string;
     const overId = over.id as string;
 
     let newStatus: Task['status'] | null = null;
-    if (overId === 'assigned' || overId === 'live' || overId === 'completed') {
+    if (['assigned', 'live', 'completed'].includes(overId)) {
       newStatus = overId as Task['status'];
     } else {
       const overTask = tasks?.find(t => t.id === overId);
@@ -251,14 +279,14 @@ export default function Tasks() {
       }
     }
 
-    if (newStatus && newStatus !== tasks?.find(t => t.id === taskId)?.status) {
+    if (newStatus) {
       if (newStatus === 'live') {
-        setActiveTimerId(taskId);
-      } else if (taskId === activeTimerId) {
+        setActiveTimerId(activeId);
+      } else if (activeId === activeTimerId) {
         setActiveTimerId(null);
       }
       
-      await db.tasks.update(taskId, { 
+      await db.tasks.update(activeId, { 
         status: newStatus,
         completedAt: newStatus === 'completed' ? Date.now() : undefined
       });
@@ -266,13 +294,16 @@ export default function Tasks() {
   };
 
   const TaskColumn = ({ title, status, items }: { title: string, status: string, items: Task[] }) => (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between px-1">
+    <div className="space-y-3 flex flex-col h-full">
+      <div className="flex items-center justify-between px-1 shrink-0">
         <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80">{title}</h2>
         <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">{items.length}</Badge>
       </div>
       <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
-        <div id={status} className="space-y-2.5 min-h-[120px] p-2 bg-muted/20 rounded-xl border-2 border-dashed border-muted/50 transition-colors hover:bg-muted/30">
+        <div 
+          id={status} 
+          className="flex-1 space-y-2.5 min-h-[200px] p-2 bg-muted/20 rounded-xl border-2 border-dashed border-muted/50 transition-colors hover:bg-muted/30"
+        >
           {items.map(task => (
             <SortableTaskCard 
               key={task.id} 
@@ -283,7 +314,7 @@ export default function Tasks() {
             />
           ))}
           {items.length === 0 && (
-            <div className="h-full flex flex-col items-center justify-center py-10 gap-2 opacity-50">
+            <div className="h-full flex flex-col items-center justify-center py-12 gap-2 opacity-50 pointer-events-none">
               <Plus className="h-4 w-4 text-muted-foreground" />
               <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">Drop Here</span>
             </div>
@@ -321,7 +352,12 @@ export default function Tasks() {
         </div>
       )}
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext 
+        sensors={sensors} 
+        collisionDetection={rectIntersection} 
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+      >
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <TaskColumn title="Assigned" status="assigned" items={assignedTasks} />
           <TaskColumn title="Live" status="live" items={liveTasks} />
