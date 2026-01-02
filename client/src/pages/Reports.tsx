@@ -164,32 +164,42 @@ export default function Reports() {
                   <div className="flex flex-wrap gap-1 mb-2">
                     {day.logs.map(log => {
                       const item = log.item;
-                      let isCompleted = false;
+                      let progress = 0;
                       if (item) {
                         switch (item.inputType) {
                           case 'yesno':
-                            isCompleted = log.value === true;
+                            progress = log.value === true ? 1 : 0;
                             break;
                           case 'number':
                           case 'slider':
                           case 'timer':
-                            isCompleted = (typeof log.value === 'number' ? log.value : 0) >= (item.targetValue || 1);
+                            const target = item.targetValue || 1;
+                            const current = typeof log.value === 'number' ? log.value : 0;
+                            progress = Math.min(current / target, 1);
                             break;
                           case 'dropdown':
-                            isCompleted = log.value === 'High';
+                            if (log.value === 'High') progress = 1;
+                            else if (log.value === 'Medium') progress = 0.5;
+                            else if (log.value === 'Low') progress = 0.25;
                             break;
                         }
                       }
 
+                      const colors = progress >= 1 
+                        ? "bg-green-100 text-green-700 border-green-200"
+                        : progress >= 0.5
+                          ? "bg-orange-100 text-orange-700 border-orange-200"
+                          : progress > 0
+                            ? "bg-red-50 text-red-600 border-red-100"
+                            : "bg-muted/30 text-muted-foreground border-dashed";
+
                       return (
                         <Badge 
                           key={log.id} 
-                          variant={isCompleted ? "default" : "outline"} 
+                          variant="outline"
                           className={cn(
-                            "text-[10px] py-0 transition-colors",
-                            isCompleted 
-                              ? "bg-green-500 hover:bg-green-600 border-transparent text-white" 
-                              : "text-muted-foreground border-dashed"
+                            "text-[10px] py-0 transition-colors border shadow-sm",
+                            colors
                           )}
                         >
                           {item?.title}: {log.value === true ? 'Yes' : log.value === false ? 'No' : log.value}
