@@ -59,7 +59,7 @@ export type InsertDailySummary = z.infer<typeof insertDailySummarySchema>;
 // ============================================================================
 
 export const priorityEnum = z.enum(["low", "medium", "high"]);
-export const taskStatusEnum = z.enum(["pending", "in-progress", "completed"]);
+export const taskStatusEnum = z.enum(["assigned", "live", "completed"]);
 
 export const subtaskSchema = z.object({
   id: z.string(),
@@ -72,7 +72,7 @@ export const taskSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
   priority: priorityEnum,
-  status: taskStatusEnum.default("pending"),
+  status: taskStatusEnum.default("assigned"),
   estimatedTime: z.number().optional(), // in minutes
   deadline: z.number().optional(), // timestamp
   category: z.string().optional(),
