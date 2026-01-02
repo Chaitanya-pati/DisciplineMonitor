@@ -5,7 +5,7 @@ import { updateProductivityStreak } from '@/lib/streaks';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Clock, AlertCircle, CheckCircle2, Circle, ChevronRight, Timer, Play, Pause } from 'lucide-react';
+import { Plus, Clock, AlertCircle, CheckCircle2, Circle, ChevronRight, Timer, Play, Pause, GripVertical } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -23,6 +23,7 @@ import {
   closestCenter,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent,
@@ -91,35 +92,24 @@ function SortableTaskCard({ task, onToggleComplete, onEdit, isActiveTimer }: {
     return `${hours > 0 ? `${hours}h ` : ''}${m}m ${s}s`;
   };
 
-  const handleStartStop = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (isActiveTimer) {
-      await db.tasks.update(task.id, { 
-        totalTimeSpent: localTime
-      });
-      // In a real app we'd track intervals, here we just toggle a 'isTimerRunning' flag or similar
-      // For now we'll use a global state in the parent
-    }
-  };
-
   return (
     <Card 
       ref={setNodeRef} 
       style={style} 
-      className={`p-4 hover-elevate ${isActiveTimer ? 'border-primary border-2 shadow-md' : ''}`}
+      className={`p-4 hover-elevate transition-shadow ${isActiveTimer ? 'border-primary border-2 shadow-md ring-2 ring-primary/20' : ''}`}
     >
       <div className="flex items-start gap-3">
         <div
-          className="cursor-grab active:cursor-grabbing touch-none mt-1"
+          className="cursor-grab active:cursor-grabbing touch-none mt-1 p-2 -m-2"
           {...attributes}
           {...listeners}
         >
-          <ChevronRight className="h-5 w-5 text-muted-foreground rotate-90" />
+          <GripVertical className="h-5 w-5 text-muted-foreground/50" />
         </div>
 
         <button
           onClick={() => onToggleComplete(task)}
-          className="flex-shrink-0 mt-1 hover-elevate active-elevate-2 p-1 rounded"
+          className="flex-shrink-0 mt-1 hover:bg-muted p-1 rounded-full transition-colors"
         >
           {task.status === 'completed' ? (
             <CheckCircle2 className="w-5 h-5 text-primary" />
@@ -132,44 +122,44 @@ function SortableTaskCard({ task, onToggleComplete, onEdit, isActiveTimer }: {
           <div className="flex items-start gap-2">
             <div className={`w-1 h-6 ${priorityColors[task.priority]} rounded-full flex-shrink-0`} />
             <div className="flex-1">
-              <h3 className={`font-medium ${task.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>
+              <h3 className={`font-medium leading-tight ${task.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>
                 {task.title}
               </h3>
               {task.description && (
-                <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{task.description}</p>
               )}
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary" className="text-xs">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Badge variant="secondary" className="text-[10px] py-0 h-5 px-1.5 font-medium">
               {priorityLabels[task.priority]}
             </Badge>
             
-            <Badge variant="outline" className={`text-xs capitalize ${task.status === 'live' ? 'text-primary border-primary animate-pulse' : ''}`}>
+            <Badge variant="outline" className={`text-[10px] py-0 h-5 px-1.5 capitalize font-medium ${task.status === 'live' ? 'text-primary border-primary animate-pulse' : ''}`}>
               {task.status}
             </Badge>
 
             {task.status === 'live' && (
-              <div className="flex items-center gap-2 bg-primary/10 px-2 py-0.5 rounded-full">
+              <div className="flex items-center gap-1.5 bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
                 <Timer className="w-3 h-3 text-primary" />
-                <span className="text-xs font-mono font-bold text-primary">
+                <span className="text-[10px] font-mono font-bold text-primary">
                   {formatDuration(localTime)}
                 </span>
               </div>
             )}
             
             {task.deadline && (
-              <Badge variant="outline" className="text-xs flex items-center gap-1">
+              <Badge variant="outline" className="text-[10px] py-0 h-5 px-1.5 flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 {format(new Date(task.deadline), 'MMM d')}
               </Badge>
             )}
 
             {delayCount && delayCount > 0 && (
-              <Badge variant="destructive" className="text-xs flex items-center gap-1">
+              <Badge variant="destructive" className="text-[10px] py-0 h-5 px-1.5 flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" />
-                {delayCount} delays
+                {delayCount}
               </Badge>
             )}
           </div>
@@ -178,6 +168,7 @@ function SortableTaskCard({ task, onToggleComplete, onEdit, isActiveTimer }: {
         <Button
           size="icon"
           variant="ghost"
+          className="h-8 w-8 -mt-1"
           onClick={() => onEdit(task)}
         >
           <ChevronRight className="w-4 h-4" />
@@ -200,7 +191,17 @@ export default function Tasks() {
   );
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -240,10 +241,14 @@ export default function Tasks() {
     const taskId = active.id as string;
     const overId = over.id as string;
 
-    // Check if dropping onto a status header or specific task
     let newStatus: Task['status'] | null = null;
     if (overId === 'assigned' || overId === 'live' || overId === 'completed') {
       newStatus = overId as Task['status'];
+    } else {
+      const overTask = tasks?.find(t => t.id === overId);
+      if (overTask) {
+        newStatus = overTask.status;
+      }
     }
 
     if (newStatus && newStatus !== tasks?.find(t => t.id === taskId)?.status) {
@@ -261,13 +266,13 @@ export default function Tasks() {
   };
 
   const TaskColumn = ({ title, status, items }: { title: string, status: string, items: Task[] }) => (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">{title}</h2>
-        <Badge variant="secondary">{items.length}</Badge>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between px-1">
+        <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80">{title}</h2>
+        <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">{items.length}</Badge>
       </div>
       <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
-        <div className="space-y-3 min-h-[100px] p-2 bg-muted/30 rounded-lg border-2 border-dashed border-muted">
+        <div id={status} className="space-y-2.5 min-h-[120px] p-2 bg-muted/20 rounded-xl border-2 border-dashed border-muted/50 transition-colors hover:bg-muted/30">
           {items.map(task => (
             <SortableTaskCard 
               key={task.id} 
@@ -278,8 +283,9 @@ export default function Tasks() {
             />
           ))}
           {items.length === 0 && (
-            <div className="h-full flex items-center justify-center py-8">
-              <span className="text-xs text-muted-foreground italic">Drag tasks here</span>
+            <div className="h-full flex flex-col items-center justify-center py-10 gap-2 opacity-50">
+              <Plus className="h-4 w-4 text-muted-foreground" />
+              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">Drop Here</span>
             </div>
           )}
         </div>
@@ -292,25 +298,31 @@ export default function Tasks() {
   const completedTasks = tasks?.filter(t => t.status === 'completed') || [];
 
   return (
-    <div className="p-4 space-y-6 pb-20 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Tasks</h1>
-          <p className="text-sm text-muted-foreground">Workflow: Assigned → Live → Completed</p>
+    <div className="p-4 space-y-6 pb-24 max-w-7xl mx-auto">
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold tracking-tight truncate">Productivity</h1>
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Workflow: Assign → Live → Done</p>
         </div>
         <Button
-          variant="outline"
+          variant="secondary"
+          size="sm"
+          className="h-9 px-3 shrink-0 shadow-sm"
           onClick={() => setShowPomodoro(!showPomodoro)}
         >
           <Timer className="w-4 h-4 mr-2" />
-          Pomodoro
+          Focus
         </Button>
       </div>
 
-      {showPomodoro && <PomodoroTimer tasks={tasks ?? []} onClose={() => setShowPomodoro(false)} />}
+      {showPomodoro && (
+        <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+          <PomodoroTimer tasks={tasks ?? []} onClose={() => setShowPomodoro(false)} />
+        </div>
+      )}
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <TaskColumn title="Assigned" status="assigned" items={assignedTasks} />
           <TaskColumn title="Live" status="live" items={liveTasks} />
           <TaskColumn title="Completed" status="completed" items={completedTasks} />
@@ -319,13 +331,17 @@ export default function Tasks() {
 
       <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setEditingTask(null); }}>
         <DialogTrigger asChild>
-          <Button className="fixed bottom-20 right-4 h-14 w-14 rounded-full shadow-lg" size="icon">
+          <Button className="fixed bottom-24 right-6 h-14 w-14 rounded-full shadow-2xl ring-4 ring-background z-50 animate-in zoom-in duration-300" size="icon">
             <Plus className="w-6 h-6" />
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>{editingTask ? 'Edit Task' : 'Add New Task'}</DialogTitle></DialogHeader>
-          <TaskForm editingTask={editingTask} onSuccess={() => { setIsDialogOpen(false); setEditingTask(null); }} />
+        <DialogContent className="max-w-[calc(100%-2rem)] md:max-w-lg rounded-2xl p-0 overflow-hidden border-none shadow-2xl">
+          <div className="p-6">
+            <DialogHeader className="mb-4">
+              <DialogTitle className="text-xl font-bold tracking-tight">{editingTask ? 'Refine Task' : 'New Task'}</DialogTitle>
+            </DialogHeader>
+            <TaskForm editingTask={editingTask} onSuccess={() => { setIsDialogOpen(false); setEditingTask(null); }} />
+          </div>
         </DialogContent>
       </Dialog>
     </div>

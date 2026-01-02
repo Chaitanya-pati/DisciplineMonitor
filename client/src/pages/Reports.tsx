@@ -133,25 +133,55 @@ export default function Reports() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="p-6">
-          <h3 className="text-sm font-medium text-muted-foreground mb-4">Fitness & Task Trends</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted)/.2)" />
-              <XAxis dataKey="date" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis fontSize={12} tickLine={false} axisLine={false} />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="fitnessScore" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} name="Fitness %" />
-              <Line type="monotone" dataKey="tasksCompleted" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={false} name="Tasks" />
-            </LineChart>
-          </ResponsiveContainer>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="p-4 md:p-6 overflow-hidden">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-6">Trends</h3>
+          <div className="h-[250px] md:h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData} margin={{ left: -20, right: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted)/.2)" />
+                <XAxis 
+                  dataKey="date" 
+                  fontSize={10} 
+                  tickLine={false} 
+                  axisLine={false}
+                  interval="preserveStartEnd"
+                />
+                <YAxis fontSize={10} tickLine={false} axisLine={false} />
+                <Tooltip 
+                  contentStyle={{ 
+                    borderRadius: '12px', 
+                    border: 'none', 
+                    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' 
+                  }} 
+                />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', paddingTop: '20px' }} />
+                <Line 
+                  type="monotone" 
+                  dataKey="fitnessScore" 
+                  stroke="hsl(var(--primary))" 
+                  strokeWidth={3} 
+                  dot={{ r: 4, fill: 'hsl(var(--primary))', strokeWidth: 2, stroke: 'white' }} 
+                  activeDot={{ r: 6 }}
+                  name="Fitness %" 
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="tasksCompleted" 
+                  stroke="hsl(var(--chart-2))" 
+                  strokeWidth={3} 
+                  dot={{ r: 4, fill: 'hsl(var(--chart-2))', strokeWidth: 2, stroke: 'white' }}
+                  activeDot={{ r: 6 }}
+                  name="Tasks" 
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </Card>
 
-        <Card className="p-6">
-          <h3 className="text-sm font-medium text-muted-foreground mb-4">Daily Breakdown</h3>
-          <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
+        <Card className="p-4 md:p-6 flex flex-col">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-6">Daily Breakdown</h3>
+          <div className="space-y-4 overflow-y-auto max-h-[400px] pr-1 scrollbar-hide">
             {dailyDetails.map(day => (
               <div key={day.dateStr} className="border-b pb-4 last:border-0">
                 <div className="flex items-center justify-between mb-2">
