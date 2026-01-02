@@ -185,22 +185,20 @@ export default function Reports() {
                         }
                       }
 
-                      const colors = progress >= 1 
-                        ? "bg-green-100 text-green-700 border-green-200"
+                      const colorStyles = progress >= 1 
+                        ? { backgroundColor: '#dcfce7', color: '#15803d', borderColor: '#bbf7d0' } // bg-green-100, text-green-700, border-green-200
                         : progress >= 0.5
-                          ? "bg-orange-100 text-orange-700 border-orange-200"
+                          ? { backgroundColor: '#ffedd5', color: '#c2410c', borderColor: '#fed7aa' } // bg-orange-100, text-orange-700, border-orange-200
                           : progress > 0
-                            ? "bg-red-50 text-red-600 border-red-100"
-                            : "bg-muted/30 text-muted-foreground border-dashed";
+                            ? { backgroundColor: '#fef2f2', color: '#dc2626', borderColor: '#fee2e2' } // bg-red-50, text-red-600, border-red-100
+                            : { backgroundColor: 'transparent', color: '#71717a', borderColor: '#e4e4e7', borderStyle: 'dashed' }; // bg-muted/30, text-muted-foreground, border-dashed
 
                       return (
                         <Badge 
                           key={log.id} 
                           variant="outline"
-                          className={cn(
-                            "text-[10px] py-0 transition-colors border shadow-sm",
-                            colors
-                          )}
+                          style={colorStyles}
+                          className="text-[10px] py-0 transition-colors border shadow-sm"
                         >
                           {item?.title}: {log.value === true ? 'Yes' : log.value === false ? 'No' : log.value}
                         </Badge>
