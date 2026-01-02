@@ -162,11 +162,40 @@ export default function Reports() {
                 </div>
                 {day.logs && day.logs.length > 0 && (
                   <div className="flex flex-wrap gap-1 mb-2">
-                    {day.logs.map(log => (
-                      <Badge key={log.id} variant="outline" className="text-[10px] py-0">
-                        {log.item?.title}: {log.value === true ? 'Yes' : log.value}
-                      </Badge>
-                    ))}
+                    {day.logs.map(log => {
+                      const item = log.item;
+                      let isCompleted = false;
+                      if (item) {
+                        switch (item.inputType) {
+                          case 'yesno':
+                            isCompleted = log.value === true;
+                            break;
+                          case 'number':
+                          case 'slider':
+                          case 'timer':
+                            isCompleted = (typeof log.value === 'number' ? log.value : 0) >= (item.targetValue || 1);
+                            break;
+                          case 'dropdown':
+                            isCompleted = log.value === 'High';
+                            break;
+                        }
+                      }
+
+                      return (
+                        <Badge 
+                          key={log.id} 
+                          variant={isCompleted ? "default" : "outline"} 
+                          className={cn(
+                            "text-[10px] py-0 transition-colors",
+                            isCompleted 
+                              ? "bg-green-500 hover:bg-green-600 border-transparent text-white" 
+                              : "text-muted-foreground border-dashed"
+                          )}
+                        >
+                          {item?.title}: {log.value === true ? 'Yes' : log.value === false ? 'No' : log.value}
+                        </Badge>
+                      );
+                    })}
                   </div>
                 )}
                 {day.tasks && day.tasks.length > 0 && (
